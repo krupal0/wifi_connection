@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:network_info_plus/network_info_plus.dart';
@@ -29,6 +30,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _localIp = '';
   String _message = '';
   final TextEditingController _controller = TextEditingController();
+  final TextEditingController ipController = TextEditingController();
   late ServerSocket _serverSocket;
 
   @override
@@ -45,9 +47,9 @@ class _MyHomePageState extends State<MyHomePage> {
         final wifiIp = await info.getWifiIP();
         print('wifi ip : ${wifiIp}');
         if (wifiIp != null && wifiIp.isNotEmpty) {
-          setState(() {
-            _localIp = wifiIp;
-          });
+          // setState(() {
+          //   _localIp = wifiIp;
+          // });
         } else {
           setState(() {
             _message = 'Error: Unable to get local IP address';
@@ -65,7 +67,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _startServer() async {
+/*  void _startServer() async {
     try {
       _serverSocket = await ServerSocket.bind(_localIp, 4000, shared: true);
       _serverSocket.listen((Socket socket) {
@@ -93,8 +95,20 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  WebSocket? serverSocket;
-  Future<void> startServer() async {
+  void _sendMessage() async {
+    try {
+      var socket = await Socket.connect(_localIp, 4000);
+      socket.write(_controller.text);
+      socket.close();
+    } catch (e) {
+      setState(() {
+        _message = 'Error: $e';
+      });
+    }
+  }*/
+
+  /*WebSocket? serverSocket;
+   Future<void> startServer() async {
     try {
       var server = await HttpServer.bind(InternetAddress.anyIPv4, 4000);
       setState(() {
@@ -144,7 +158,6 @@ class _MyHomePageState extends State<MyHomePage> {
         setState(() {
           _message = 'Received: $message';
         });
-        // Handle game updates
       }, onError: (error) {
         setState(() {
           _message = _message = 'WebSocket error: $error';
@@ -154,9 +167,6 @@ class _MyHomePageState extends State<MyHomePage> {
           _message = 'Server disconnected';
         });
       });
-
-      // Send messages to server
-      // clientSocket?.add('Hello from client');
     } catch (e) {
       setState(() {
         _message = 'Error: $e';
@@ -164,21 +174,107 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _stopServer() {
+  void stopServer() {
     _serverSocket?.close();
     setState(() {
       _message = 'Server stopped';
     });
   }
 
-  void _sendMessage() async {
+  void sendMessage() async {
     try {
       serverSocket !=null ?
       serverSocket?.add(_controller.text) :
       clientSocket?.add(_controller.text);
-      // var socket = await Socket.connect(_localIp, 4000);
-      // socket.write(_controller.text);
-      // socket.close();
+    } catch (e) {
+      setState(() {
+        _message = 'Error: $e';
+      });
+    }
+  }*/
+
+  ServerSocket? serverSocket;
+  Future<void> startServer() async {
+    try {
+      // Retrieve the list of network interfaces
+      List<NetworkInterface> interfaces = await NetworkInterface.list();
+
+      // Find the interface corresponding to the Wi-Fi hotspot
+      NetworkInterface wifiHotspotInterface = interfaces.firstWhere(
+        (interface) =>
+            interface.name.contains('wlan') || interface.name.contains('ap'),
+      );
+
+      if (wifiHotspotInterface != null) {
+        // Get the first non-loopback IPv4 address on the hotspot interface
+        InternetAddress hostIpAddress =
+            wifiHotspotInterface.addresses.firstWhere(
+          (address) =>
+              !address.isLoopback && address.type == InternetAddressType.IPv4,
+        );
+
+        var internetIp = InternetAddress.anyIPv4;
+        // Start the server socket
+        var serverSocket = await ServerSocket.bind(internetIp, 4000);
+        setState(() {
+          _message = 'Server started on ${hostIpAddress.address}:4000';
+        });
+        // setState(() {
+        //   _localIp =
+        //       hostIpAddress.address;
+        // });
+        // Listen for incoming connections
+        serverSocket.listen((Socket socket) {
+
+          socket.listen((List<int> data) {
+            String message = String.fromCharCodes(data);
+            setState(() {
+              _message =  'Client connected from ${socket.remoteAddress.address}:${socket.remotePort} , data : $message';
+            });
+
+            socket.write('received: $message');
+          });
+        });
+      } else {
+        setState(() {
+          _message = 'No Wi-Fi hotspot interface found.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _message = 'Error: $e';
+      });
+    }
+  }
+
+  Future<void> listener() async {
+    try {
+      var socket = await Socket.connect(
+          ipController.text.trim(), 4000);
+      _localIp = ipController.text.trim();
+      setState(() {
+        _message = 'stared listening';
+      });
+      socket.listen((data) {
+        print('Received from server: $data');
+        setState(() {
+          _message = 'Received: $data';
+        });
+      });
+    } catch (e) {
+      setState(() {
+        _message = 'Error: $e';
+      });
+    }
+  }
+
+  void stopServer() {}
+
+  void sendMessage() async {
+    try {
+      var socket = await Socket.connect(_localIp, 4000);
+      socket.write(_controller.text);
+      socket.close();
     } catch (e) {
       setState(() {
         _message = 'Error: $e';
@@ -203,13 +299,20 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: startServer,
               child: Text('Start Server'),
             ),
+            TextField(
+              controller: ipController,
+              decoration: InputDecoration(
+                labelText: 'ip add',
+                border: OutlineInputBorder(),
+              ),
+            ),
             ElevatedButton(
               onPressed: listener,
               child: Text('Listen Server'),
             ),
             SizedBox(height: 8.0),
             ElevatedButton(
-              onPressed: _stopServer,
+              onPressed: stopServer,
               child: Text('Stop Server'),
             ),
             SizedBox(height: 16.0),
@@ -222,7 +325,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             SizedBox(height: 16.0),
             ElevatedButton(
-              onPressed: _sendMessage,
+              onPressed: sendMessage,
               child: Text('Send Message'),
             ),
             SizedBox(height: 16.0),
