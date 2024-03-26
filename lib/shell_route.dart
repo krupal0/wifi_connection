@@ -30,14 +30,6 @@ class ShellRouteExampleApp extends StatelessWidget {
             builder: (BuildContext context, GoRouterState state) {
               return const ScreenA();
             },
-            routes: <RouteBase>[
-              GoRoute(
-                path: 'details',
-                builder: (BuildContext context, GoRouterState state) {
-                  return const DetailsScreen(label: 'A');
-                },
-              ),
-            ],
           ),
           GoRoute(
             path: '/b',
@@ -68,7 +60,14 @@ class ShellRouteExampleApp extends StatelessWidget {
               ),
             ],
           ),
+
         ],
+      ),
+      GoRoute(
+        path: '/details',
+        builder: (BuildContext context, GoRouterState state) {
+          return const DetailsScreen(label: 'default');
+        },
       ),
     ],
   );
@@ -158,7 +157,7 @@ class ScreenA extends StatelessWidget {
             const Text('Screen A'),
             TextButton(
               onPressed: () {
-                GoRouter.of(context).go('/a/details');
+                GoRouter.of(context).go('/details');
               },
               child: const Text('View A details'),
             ),
