@@ -49,7 +49,7 @@ class ShellRouteExampleApp extends StatelessWidget {
                 path: 'details',
                 parentNavigatorKey: _rootNavigatorKey,
                 builder: (BuildContext context, GoRouterState state) {
-                  return DetailsScreen(label: state.extra.toString() ?? '');
+                  return DetailsScreen(label: state.extra.toString());
                 },
               ),
             ],
