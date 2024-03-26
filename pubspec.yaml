@@ -38,6 +38,8 @@ dependencies:
   connectivity_plus: ^5.0.2
   network_info_plus: ^4.1.0+1
   web_socket_channel: ^2.4.4
+  ping_discover_network_forked: ^0.0.1
+  flutter_p2p_connection: ^2.0.1
 
 dev_dependencies:
   flutter_test:
